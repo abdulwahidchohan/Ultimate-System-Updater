@@ -4,6 +4,13 @@
 # Made by Abdul Wahid
 # Primary Use Case: Modern interactive use, high customization
 
+# --- AUTOMATIC ADMINISTRATOR CHECK ---
+if [ "$EUID" -ne 0 ]; then
+    printf "\033[33m[!] Administrator privileges required. Requesting sudo access...\033[0m\n"
+    exec sudo zsh "$0" "$@"
+    exit
+fi
+
 printf "\033[36m=============================================\033[0m\n"
 printf "\033[36m      STARTING FULL SYSTEM UPDATE PROCESS    \033[0m\n"
 printf "\033[36m           Made by Abdul Wahid               \033[0m\n"
