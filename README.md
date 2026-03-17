@@ -65,25 +65,25 @@ The easiest way to get the updater for your specific system is to run a simple d
 ### 🪟 Windows (Command Prompt)
 Open `cmd.exe` as Administrator and run:
 ```cmd
-curl -O "https://raw.githubusercontent.com/abdulwahid/Entire-software-update/main/Ultimate-Windows-Updater.cmd" && Ultimate-Windows-Updater.cmd
+curl -O "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Ultimate-Windows-Updater.cmd" && Ultimate-Windows-Updater.cmd
 ```
 
 ### 🪟 Windows (PowerShell)
 Open PowerShell as Administrator and run:
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/abdulwahid/Entire-software-update/main/PowerShell-Updater.ps1" -OutFile "PowerShell-Updater.ps1"; .\PowerShell-Updater.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1" -OutFile "PowerShell-Updater.ps1"; .\PowerShell-Updater.ps1
 ```
 
 ### 🐧 Linux (Bash)
 Open your terminal and run:
 ```bash
-curl -O "https://raw.githubusercontent.com/abdulwahid/Entire-software-update/main/Bash-Linux-Updater.sh" && chmod +x Bash-Linux-Updater.sh && sudo ./Bash-Linux-Updater.sh
+curl -O "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Bash-Linux-Updater.sh" && chmod +x Bash-Linux-Updater.sh && sudo ./Bash-Linux-Updater.sh
 ```
 
 ### 🍎 macOS (Zsh)
 Open your terminal and run:
 ```zsh
-curl -O "https://raw.githubusercontent.com/abdulwahid/Entire-software-update/main/Zsh-Mac-Updater.zsh" && chmod +x Zsh-Mac-Updater.zsh && ./Zsh-Mac-Updater.zsh
+curl -O "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Zsh-Mac-Updater.zsh" && chmod +x Zsh-Mac-Updater.zsh && ./Zsh-Mac-Updater.zsh
 ```
 
 ### 🌐 OR Download the Full ZIP
