@@ -9,7 +9,7 @@
 [![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black)](#-linux-bash)
 [![Cisco](https://img.shields.io/badge/Cisco-1BA0D7?style=for-the-badge&logo=cisco&logoColor=white)](#-cisco-ios-network-hardware)
 
-A comprehensive suite of automated maintenance and update scripts created by **Abdul Wahid**. Keeping your machines secure, drivers up-to-date, and applications running perfectly has never been easier. 
+A comprehensive suite of automated maintenance and update scripts created by **Abdul Wahid Chohan**. Keeping your machines secure, drivers up-to-date, and applications running perfectly has never been easier. 
 
 </div>
 
