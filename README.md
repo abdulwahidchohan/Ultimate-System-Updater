@@ -102,5 +102,5 @@ Feel free to fork this project, edit the scripts, and modify any toolsets you fi
 ---
 
 <div align="center">
-  <i>Automating the world one shell at a time. Made with ❤️ by Abdul Wahid.</i>
+  <i>Automating the world one shell at a time. Made with ❤️ by Abdul Wahid Chohan.</i>
 </div>
