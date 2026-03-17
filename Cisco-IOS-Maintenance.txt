@@ -1,0 +1,58 @@
+! Cisco IOS Maintenance & Update Checklist Template
+! Made by Abdul Wahid
+! Primary Case: Configuring routers and switches
+
+! ----------------------------------------------------
+! 1. Enter Privileged EXEC mode
+! ----------------------------------------------------
+enable
+
+! ----------------------------------------------------
+! 2. Show system version and uptime
+! Verify current IOS version before any upgrades
+! ----------------------------------------------------
+show version
+
+! ----------------------------------------------------
+! 3. Show current running configuration & Interface status
+! ----------------------------------------------------
+show running-config
+show ip interface brief
+
+! ----------------------------------------------------
+! 4. Save the running configuration to NVRAM 
+! (crucial before making changes or reloading)
+! ----------------------------------------------------
+copy running-config startup-config
+
+! ----------------------------------------------------
+! 5. Check flash memory for available space
+! (Determine if you can fit a new .bin file)
+! ----------------------------------------------------
+show flash:
+
+! ----------------------------------------------------
+! 6. Ping a test destination to verify internet connectivity
+! ----------------------------------------------------
+ping 8.8.8.8
+
+! ----------------------------------------------------
+! 7. Download new IOS image via TFTP (Example)
+! ----------------------------------------------------
+! copy tftp: flash:
+! Address or name of remote host []? 192.168.1.10
+! Source filename []? c1900-universalk9-mz.SPA.154-3.M2.bin
+! Destination filename []? c1900-universalk9-mz.SPA.154-3.M2.bin
+
+! ----------------------------------------------------
+! 8. Set the boot path to the new image
+! ----------------------------------------------------
+! configure terminal
+! boot system flash c1900-universalk9-mz.SPA.154-3.M2.bin
+! exit
+! copy running-config startup-config
+
+! ----------------------------------------------------
+! 9. Reload router to apply changes
+! ----------------------------------------------------
+! reload
