@@ -27,11 +27,21 @@ Whether you are an IT Administrator managing a fleet of devices, a developer loo
 
 | CLI Name | Primary OS | Primary Use Case | Dedicated File |
 | :--- | :--- | :--- | :--- |
-| **Command Prompt** | Windows | Basic tasks, legacy support | `Ultimate-Windows-Updater.cmd` |
-| **PowerShell** | Windows / Cross-platform | Advanced automation, system admin | `PowerShell-Updater.ps1` |
-| **Bash** | Linux / macOS | General purpose scripting and dev | `Bash-Linux-Updater.sh` |
-| **Zsh** | macOS / Linux | Modern interactive use, high customization | `Zsh-Mac-Updater.zsh` |
-| **Cisco IOS** | Network Hardware | Manual firmware and maintenance checklist | `Cisco-IOS-Maintenance.txt` |
+| **Command Prompt** | Windows | Basic tasks, legacy support | [Ultimate-Windows-Updater.cmd](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Ultimate-Windows-Updater.cmd) |
+| **PowerShell** | Windows / Cross-platform | Advanced automation, system admin | [PowerShell-Updater.ps1](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1) |
+| **Bash** | Linux / macOS | General purpose scripting and dev | [Bash-Linux-Updater.sh](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Bash-Linux-Updater.sh) |
+| **Zsh** | macOS / Linux | Modern interactive use, high customization | [Zsh-Mac-Updater.zsh](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Zsh-Mac-Updater.zsh) |
+| **Cisco IOS** | Network Hardware | Manual firmware and maintenance checklist | [Cisco-IOS-Maintenance.txt](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Cisco-IOS-Maintenance.txt) |
+
+### 🔗 Public Direct Links (No Login Required)
+
+- Repository Home: [https://github.com/abdulwahidchohan/Ultimate-System-Updater](https://github.com/abdulwahidchohan/Ultimate-System-Updater)
+- Download ZIP: [https://github.com/abdulwahidchohan/Ultimate-System-Updater/archive/refs/heads/main.zip](https://github.com/abdulwahidchohan/Ultimate-System-Updater/archive/refs/heads/main.zip)
+- Raw CMD Script: [https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Ultimate-Windows-Updater.cmd](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Ultimate-Windows-Updater.cmd)
+- Raw PowerShell Script: [https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1)
+- Raw Linux Bash Script: [https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Bash-Linux-Updater.sh](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Bash-Linux-Updater.sh)
+- Raw macOS Zsh Script: [https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Zsh-Mac-Updater.zsh](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Zsh-Mac-Updater.zsh)
+- Raw Cisco Checklist: [https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Cisco-IOS-Maintenance.txt](https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Cisco-IOS-Maintenance.txt)
 
 ---
 
@@ -65,29 +75,29 @@ The easiest way to get the updater for your specific system is to run a simple d
 ### 🪟 Windows (Command Prompt)
 Open `cmd.exe` as Administrator and run:
 ```cmd
-curl -O "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Ultimate-Windows-Updater.cmd" && Ultimate-Windows-Updater.cmd
+curl -L -o Ultimate-Windows-Updater.cmd "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Ultimate-Windows-Updater.cmd" && Ultimate-Windows-Updater.cmd
 ```
 
 ### 🪟 Windows (PowerShell)
 Open PowerShell as Administrator and run:
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1" -OutFile "PowerShell-Updater.ps1"; powershell -ExecutionPolicy Bypass -File .\PowerShell-Updater.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1" -OutFile "PowerShell-Updater.ps1"; powershell -NoProfile -ExecutionPolicy Bypass -File .\PowerShell-Updater.ps1
 ```
 
 ### 🐧 Linux (Bash)
 Open your terminal and run:
 ```bash
-curl -O "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Bash-Linux-Updater.sh" && chmod +x Bash-Linux-Updater.sh && sudo ./Bash-Linux-Updater.sh
+curl -L -o Bash-Linux-Updater.sh "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Bash-Linux-Updater.sh" && chmod +x Bash-Linux-Updater.sh && sudo ./Bash-Linux-Updater.sh
 ```
 
 ### 🍎 macOS (Zsh)
 Open your terminal and run:
 ```zsh
-curl -O "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Zsh-Mac-Updater.zsh" && chmod +x Zsh-Mac-Updater.zsh && ./Zsh-Mac-Updater.zsh
+curl -L -o Zsh-Mac-Updater.zsh "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/Zsh-Mac-Updater.zsh" && chmod +x Zsh-Mac-Updater.zsh && ./Zsh-Mac-Updater.zsh
 ```
 
 ### 🌐 OR Download the Full ZIP
-If you want the entire suite of scripts, click the green **`Code`** button at the top of this repository and select **`Download ZIP`**. Extract the files and double click the relevant script for your OS.
+If you want the entire suite of scripts, use this direct ZIP link: [https://github.com/abdulwahidchohan/Ultimate-System-Updater/archive/refs/heads/main.zip](https://github.com/abdulwahidchohan/Ultimate-System-Updater/archive/refs/heads/main.zip)
 
 ## ⚠️ Requirements & Warnings
 
