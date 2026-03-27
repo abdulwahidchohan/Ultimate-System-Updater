@@ -1,6 +1,6 @@
 ! Cisco IOS Maintenance & Update Checklist Template
-! Made by Abdul Wahid
-! Primary Case: Configuring routers and switches
+! Made by Abdul Wahid Chohan
+! Primary Case: Firmware updates and configuration backup for routers/switches
 
 ! ----------------------------------------------------
 ! 1. Enter Privileged EXEC mode
@@ -43,6 +43,7 @@ ping 8.8.8.8
 ! Address or name of remote host []? 192.168.1.10
 ! Source filename []? c1900-universalk9-mz.SPA.154-3.M2.bin
 ! Destination filename []? c1900-universalk9-mz.SPA.154-3.M2.bin
+! Verify the file in flash after transfer and confirm file size/hash if available
 
 ! ----------------------------------------------------
 ! 8. Set the boot path to the new image
@@ -54,5 +55,6 @@ ping 8.8.8.8
 
 ! ----------------------------------------------------
 ! 9. Reload router to apply changes
+! WARNING: Reload will interrupt all traffic through this device
 ! ----------------------------------------------------
 ! reload

@@ -31,7 +31,7 @@ Whether you are an IT Administrator managing a fleet of devices, a developer loo
 | **PowerShell** | Windows / Cross-platform | Advanced automation, system admin | `PowerShell-Updater.ps1` |
 | **Bash** | Linux / macOS | General purpose scripting and dev | `Bash-Linux-Updater.sh` |
 | **Zsh** | macOS / Linux | Modern interactive use, high customization | `Zsh-Mac-Updater.zsh` |
-| **Cisco IOS** | Network Hardware | Configuring routers and switches | `Cisco-IOS-Maintenance.txt` |
+| **Cisco IOS** | Network Hardware | Manual firmware and maintenance checklist | `Cisco-IOS-Maintenance.txt` |
 
 ---
 
@@ -39,22 +39,22 @@ Whether you are an IT Administrator managing a fleet of devices, a developer loo
 
 ### 🪟 Windows (Command Prompt `cmd` & `powershell`)
 - **Auto-Elevates to Administrator:** Requests Admin privileges automatically.
-- **Windows OS & OEM Driver Updates:** Installs `PSWindowsUpdate` and handles pending OS updates. Smart detection for OEM drivers via **Dell Command Update** and **Lenovo System Update**.
+- **Windows OS & OEM Driver Updates:** Installs `PSWindowsUpdate` and handles pending OS updates. Attempts OEM driver updates via **Dell Command Update** and **Lenovo System Update**, with clear fallback messaging if unavailable.
 - **Package Managers:** Upgrades software via **Winget** and **Chocolatey (Choco)**.
-- **Developer Tools:** Instantly updates **Node.js**, **NPM global packages**, and **Python (`pip-review`)**.
+- **Developer Tools:** Updates **Node.js**, **NPM global packages**, and **Python (`pip-review`)**.
 
 ### 🐧 Linux (`bash`)
 - **APT Packages:** Updates core OS packages via `apt update` & `upgrade` on Ubuntu/Debian arrays.
 - **Snap & Flatpak:** Refreshes universal Linux app packages seamlessly.
-- **Developer Packages:** Keeps global NPM modules updated securely without searching.
+- **Developer Packages:** Keeps global NPM modules updated without manual search.
 
 ### 🍎 macOS (`zsh`)
-- **macOS Software Update:** Downloads and installs core Apple updates securely via `softwareupdate`.
+- **macOS Software Update:** Downloads and installs core Apple updates via `softwareupdate`.
 - **Homebrew Automation:** Updates and scrubs the `brew` package directory automatically.
 - **Ruby & Node:** Ensures system-level ruby gems (`gem update`) and global NPM binaries are at their latest version.
 
 ### 🌐 Cisco IOS (`network hardware`)
-- **Standard Maintenance Routine:** Includes an essential checklist for backing up configurations (`copy run start`), verifying connectivity, checking flash memory space, and securely loading new `.bin` IOS firmware images via TFTP.
+- **Manual Maintenance Routine:** Includes an essential CLI checklist for backing up configurations (`copy run start`), verifying connectivity, checking flash memory space, and loading new `.bin` IOS firmware images via TFTP.
 
 ---
 
@@ -71,7 +71,7 @@ curl -O "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Upda
 ### 🪟 Windows (PowerShell)
 Open PowerShell as Administrator and run:
 ```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1" -OutFile "PowerShell-Updater.ps1"; .\PowerShell-Updater.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1" -OutFile "PowerShell-Updater.ps1"; powershell -ExecutionPolicy Bypass -File .\PowerShell-Updater.ps1
 ```
 
 ### 🐧 Linux (Bash)
@@ -93,6 +93,8 @@ If you want the entire suite of scripts, click the green **`Code`** button at th
 
 * **Internet Connection:** An active internet connection is required to fetch software packages and driver bundles.
 * **Permissions:** Make sure your user account has `sudo` (Linux/Mac) or `Administrator` privileges (Windows).
+* **Automation Mode:** Scripts auto-detect non-interactive sessions and skip final keypress prompts. You can also pass `--non-interactive` to Linux/macOS scripts.
+* **Aggressive Update Policy:** Developer package steps intentionally update global packages (pip/gem/cargo) in bulk.
 * **Disclaimer:** Automatically updating deep OEM drivers and core packages can occasionally cause unexpected behavior depending on your system configuration. *Use at your own risk.* 
 
 ## 🤝 Customization & Contributing
