@@ -55,7 +55,7 @@ check_internet_connectivity
 internet_check_status=$?
 if [ "$internet_check_status" -ne 0 ]; then
     if [ "$internet_check_status" -eq 2 ]; then
-        printf "\033[31m[!] curl/wget is not installed, so internet connectivity cannot be verified. Install curl or wget and re-run this script.\033[0m\n"
+        printf "\033[31m[!] curl or wget is not installed, so internet connectivity cannot be verified. Install curl or wget and re-run this script.\033[0m\n"
     else
         printf "\033[31m[!] Internet connectivity check failed. Connect to the internet and re-run this script.\033[0m\n"
     fi
