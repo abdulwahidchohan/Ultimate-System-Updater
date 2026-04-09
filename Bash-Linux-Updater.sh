@@ -27,6 +27,18 @@ wait_for_apt_processes() {
     return 1
 }
 
+check_internet_connectivity() {
+    if command -v curl >/dev/null 2>&1; then
+        curl --head --silent --fail --max-time 10 https://github.com >/dev/null 2>&1
+        return $?
+    elif command -v wget >/dev/null 2>&1; then
+        wget --spider --quiet --timeout=10 https://github.com >/dev/null 2>&1
+        return $?
+    fi
+
+    return 0
+}
+
 # --- AUTOMATIC ADMINISTRATOR CHECK ---
 CURRENT_EUID="${EUID:-$(id -u)}"
 if [ "$CURRENT_EUID" -ne 0 ]; then
@@ -46,6 +58,11 @@ echo -e "\e[36m      STARTING FULL SYSTEM UPDATE PROCESS    \e[0m"
 echo -e "\e[36m       Made by Abdul Wahid Chohan            \e[0m"
 echo -e "\e[36m=============================================\e[0m"
 echo ""
+
+if ! check_internet_connectivity; then
+    echo -e "\e[31m[!] Internet connectivity check failed. Connect to the internet and re-run this script.\e[0m"
+    exit 1
+fi
 
 # ============================================
 # STEP 1: OS Package Manager Updates (all distros)
@@ -203,5 +220,5 @@ fi
 echo ""
 
 if [ "$NON_INTERACTIVE" -eq 0 ]; then
-    read -p "Press Enter to exit..."
+    read -r -p "Press Enter to exit..."
 fi

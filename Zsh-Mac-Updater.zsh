@@ -15,6 +15,18 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
     NON_INTERACTIVE=1
 fi
 
+check_internet_connectivity() {
+    if command -v curl >/dev/null 2>&1; then
+        curl --head --silent --fail --max-time 10 https://github.com >/dev/null 2>&1
+        return $?
+    elif command -v wget >/dev/null 2>&1; then
+        wget --spider --quiet --timeout=10 https://github.com >/dev/null 2>&1
+        return $?
+    fi
+
+    return 0
+}
+
 # --- AUTOMATIC ADMINISTRATOR CHECK ---
 CURRENT_EUID="${EUID:-$(id -u)}"
 if [ "$CURRENT_EUID" -ne 0 ]; then
@@ -34,6 +46,11 @@ printf "\033[36m      STARTING FULL SYSTEM UPDATE PROCESS    \033[0m\n"
 printf "\033[36m       Made by Abdul Wahid Chohan            \033[0m\n"
 printf "\033[36m=============================================\033[0m\n"
 echo ""
+
+if ! check_internet_connectivity; then
+    printf "\033[31m[!] Internet connectivity check failed. Connect to the internet and re-run this script.\033[0m\n"
+    exit 1
+fi
 
 # ============================================
 # STEP 1: macOS System Updates
