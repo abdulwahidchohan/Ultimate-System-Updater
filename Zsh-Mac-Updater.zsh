@@ -15,14 +15,16 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
     NON_INTERACTIVE=1
 fi
 
+CONNECTIVITY_CHECK_URL="https://github.com"
+
 check_internet_connectivity() {
     if command -v curl >/dev/null 2>&1; then
-        if curl --head --silent --fail --max-time 10 https://github.com >/dev/null 2>&1; then
+        if curl --head --silent --fail --max-time 10 ${CONNECTIVITY_CHECK_URL} >/dev/null 2>&1; then
             return 0
         fi
         return 1
     elif command -v wget >/dev/null 2>&1; then
-        if wget --spider --quiet --timeout=10 https://github.com >/dev/null 2>&1; then
+        if wget --spider --quiet --timeout=10 ${CONNECTIVITY_CHECK_URL} >/dev/null 2>&1; then
             return 0
         fi
         return 1
