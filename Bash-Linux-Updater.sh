@@ -15,6 +15,8 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
     NON_INTERACTIVE=1
 fi
 
+CONNECTIVITY_CHECK_URL="https://github.com"
+
 wait_for_apt_processes() {
     local retries=60
     while [ "$retries" -gt 0 ]; do
@@ -25,6 +27,22 @@ wait_for_apt_processes() {
         retries=$((retries - 1))
     done
     return 1
+}
+
+check_internet_connectivity() {
+    if command -v curl >/dev/null 2>&1; then
+        if curl --head --silent --fail --max-time 10 "${CONNECTIVITY_CHECK_URL}" >/dev/null 2>&1; then
+            return 0
+        fi
+        return 1
+    elif command -v wget >/dev/null 2>&1; then
+        if wget --spider --quiet --timeout=10 "${CONNECTIVITY_CHECK_URL}" >/dev/null 2>&1; then
+            return 0
+        fi
+        return 1
+    fi
+
+    return 2
 }
 
 # --- AUTOMATIC ADMINISTRATOR CHECK ---
@@ -46,6 +64,17 @@ echo -e "\e[36m      STARTING FULL SYSTEM UPDATE PROCESS    \e[0m"
 echo -e "\e[36m       Made by Abdul Wahid Chohan            \e[0m"
 echo -e "\e[36m=============================================\e[0m"
 echo ""
+
+check_internet_connectivity
+internet_check_status=$?
+if [ "$internet_check_status" -ne 0 ]; then
+    if [ "$internet_check_status" -eq 2 ]; then
+        echo -e "\e[31m[!] curl or wget is not installed, so internet connectivity cannot be verified. Install curl or wget and re-run this script.\e[0m"
+    else
+        echo -e "\e[31m[!] Internet connectivity check failed. Connect to the internet and re-run this script.\e[0m"
+    fi
+    exit 1
+fi
 
 # ============================================
 # STEP 1: OS Package Manager Updates (all distros)
@@ -203,5 +232,5 @@ fi
 echo ""
 
 if [ "$NON_INTERACTIVE" -eq 0 ]; then
-    read -p "Press Enter to exit..."
+    read -r -p "Press Enter to exit..."
 fi
