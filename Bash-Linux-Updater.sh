@@ -36,7 +36,7 @@ check_internet_connectivity() {
         return $?
     fi
 
-    return 0
+    return 1
 }
 
 # --- AUTOMATIC ADMINISTRATOR CHECK ---
@@ -60,7 +60,7 @@ echo -e "\e[36m=============================================\e[0m"
 echo ""
 
 if ! check_internet_connectivity; then
-    echo -e "\e[31m[!] Internet connectivity check failed. Connect to the internet and re-run this script.\e[0m"
+    echo -e "\e[31m[!] Internet connectivity check failed (or curl/wget is unavailable). Install curl/wget, connect to the internet, and re-run this script.\e[0m"
     exit 1
 fi
 
