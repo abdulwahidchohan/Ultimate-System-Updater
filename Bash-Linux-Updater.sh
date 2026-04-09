@@ -29,14 +29,18 @@ wait_for_apt_processes() {
 
 check_internet_connectivity() {
     if command -v curl >/dev/null 2>&1; then
-        curl --head --silent --fail --max-time 10 https://github.com >/dev/null 2>&1
-        return $?
+        if curl --head --silent --fail --max-time 10 https://github.com >/dev/null 2>&1; then
+            return 0
+        fi
+        return 1
     elif command -v wget >/dev/null 2>&1; then
-        wget --spider --quiet --timeout=10 https://github.com >/dev/null 2>&1
-        return $?
+        if wget --spider --quiet --timeout=10 https://github.com >/dev/null 2>&1; then
+            return 0
+        fi
+        return 1
     fi
 
-    return 1
+    return 2
 }
 
 # --- AUTOMATIC ADMINISTRATOR CHECK ---
@@ -59,8 +63,14 @@ echo -e "\e[36m       Made by Abdul Wahid Chohan            \e[0m"
 echo -e "\e[36m=============================================\e[0m"
 echo ""
 
-if ! check_internet_connectivity; then
-    echo -e "\e[31m[!] Internet connectivity check failed (or curl/wget is unavailable). Install curl/wget, connect to the internet, and re-run this script.\e[0m"
+check_internet_connectivity
+internet_check_status=$?
+if [ "$internet_check_status" -ne 0 ]; then
+    if [ "$internet_check_status" -eq 2 ]; then
+        echo -e "\e[31m[!] curl/wget is not installed, so internet connectivity cannot be verified. Install curl or wget and re-run this script.\e[0m"
+    else
+        echo -e "\e[31m[!] Internet connectivity check failed. Connect to the internet and re-run this script.\e[0m"
+    fi
     exit 1
 fi
 
