@@ -31,12 +31,12 @@ wait_for_apt_processes() {
 
 check_internet_connectivity() {
     if command -v curl >/dev/null 2>&1; then
-        if curl --head --silent --fail --max-time 10 ${CONNECTIVITY_CHECK_URL} >/dev/null 2>&1; then
+        if curl --head --silent --fail --max-time 10 "${CONNECTIVITY_CHECK_URL}" >/dev/null 2>&1; then
             return 0
         fi
         return 1
     elif command -v wget >/dev/null 2>&1; then
-        if wget --spider --quiet --timeout=10 ${CONNECTIVITY_CHECK_URL} >/dev/null 2>&1; then
+        if wget --spider --quiet --timeout=10 "${CONNECTIVITY_CHECK_URL}" >/dev/null 2>&1; then
             return 0
         fi
         return 1
