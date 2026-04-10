@@ -136,7 +136,7 @@ where rustup >nul 2>&1
 if %errorlevel% equ 0 (
     call rustup update
     where cargo-install-update >nul 2>&1
-    if %errorlevel% equ 0 (
+    if !errorlevel! equ 0 (
         call cargo install-update -a
     ) else (
         echo [*] Install cargo-update for auto-updating cargo packages: cargo install cargo-update

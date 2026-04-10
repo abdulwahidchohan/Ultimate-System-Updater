@@ -16,6 +16,16 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
 fi
 
 CONNECTIVITY_CHECK_URL="https://github.com"
+ORIGINAL_USER="${SUDO_USER:-}"
+
+run_user_shell() {
+    local cmd="$1"
+    if [ -n "$ORIGINAL_USER" ] && [ "$ORIGINAL_USER" != "root" ]; then
+        sudo -H -u "$ORIGINAL_USER" zsh -lc "$cmd"
+    else
+        zsh -lc "$cmd"
+    fi
+}
 
 check_internet_connectivity() {
     if command -v curl >/dev/null 2>&1; then
@@ -76,11 +86,9 @@ echo ""
 # STEP 2: Homebrew Package Manager
 # ============================================
 printf "\033[33m[2/7] Updating Homebrew Packages...\033[0m\n"
-if command -v brew >/dev/null 2>&1; then
+if run_user_shell "command -v brew >/dev/null 2>&1"; then
     printf "\033[90m  [*] Running brew update & upgrade...\033[0m\n"
-    brew update
-    brew upgrade
-    brew cleanup
+    run_user_shell "brew update && brew upgrade && brew cleanup"
 else
     printf "\033[90m  Homebrew not found. Install from https://brew.sh\033[0m\n"
 fi
@@ -90,9 +98,9 @@ echo ""
 # STEP 3: Mac App Store Apps (via mas-cli)
 # ============================================
 printf "\033[33m[3/7] Updating Mac App Store Apps...\033[0m\n"
-if command -v mas >/dev/null 2>&1; then
-    if mas account >/dev/null 2>&1; then
-        mas upgrade
+if run_user_shell "command -v mas >/dev/null 2>&1"; then
+    if run_user_shell "mas account >/dev/null 2>&1"; then
+        run_user_shell "mas upgrade"
     else
         printf "\033[90m  mas installed but not signed in. Skipping.\033[0m\n"
     fi
@@ -105,8 +113,8 @@ echo ""
 # STEP 4: Node.js & Global NPM Packages
 # ============================================
 printf "\033[33m[4/7] Updating Global NPM Packages...\033[0m\n"
-if command -v npm >/dev/null 2>&1; then
-    npm update -g
+if run_user_shell "command -v npm >/dev/null 2>&1"; then
+    run_user_shell "npm update -g"
 else
     printf "\033[90m  npm not found. Skipping.\033[0m\n"
 fi
@@ -117,17 +125,17 @@ echo ""
 # ============================================
 printf "\033[33m[5/7] Updating Global Python (PIP) Packages...\033[0m\n"
 printf "\033[33m  [!] Aggressive mode enabled: updating all global Python packages.\033[0m\n"
-if command -v pip3 >/dev/null 2>&1; then
-    pip3 install pip-review --upgrade
-    if command -v pip-review >/dev/null 2>&1; then
-        pip-review --local --auto
+if run_user_shell "command -v pip3 >/dev/null 2>&1"; then
+    run_user_shell "pip3 install pip-review --upgrade"
+    if run_user_shell "command -v pip-review >/dev/null 2>&1"; then
+        run_user_shell "pip-review --local --auto"
     else
         printf "\033[90m  pip-review not found after install attempt. Skipping auto-review.\033[0m\n"
     fi
-elif command -v pip >/dev/null 2>&1; then
-    pip install pip-review --upgrade
-    if command -v pip-review >/dev/null 2>&1; then
-        pip-review --local --auto
+elif run_user_shell "command -v pip >/dev/null 2>&1"; then
+    run_user_shell "pip install pip-review --upgrade"
+    if run_user_shell "command -v pip-review >/dev/null 2>&1"; then
+        run_user_shell "pip-review --local --auto"
     else
         printf "\033[90m  pip-review not found after install attempt. Skipping auto-review.\033[0m\n"
     fi
@@ -141,9 +149,9 @@ echo ""
 # ============================================
 printf "\033[33m[6/7] Updating Ruby Gems...\033[0m\n"
 printf "\033[33m  [!] Aggressive mode enabled: updating system RubyGems and all global gems.\033[0m\n"
-if command -v gem >/dev/null 2>&1; then
-    gem update --system
-    gem update
+if run_user_shell "command -v gem >/dev/null 2>&1"; then
+    run_user_shell "gem update --system"
+    run_user_shell "gem update"
 else
     printf "\033[90m  gem not found. Skipping.\033[0m\n"
 fi
@@ -154,10 +162,10 @@ echo ""
 # ============================================
 printf "\033[33m[7/7] Updating Rust & Global Cargo Packages...\033[0m\n"
 printf "\033[33m  [!] Aggressive mode enabled: updating all globally installed cargo crates.\033[0m\n"
-if command -v rustup >/dev/null 2>&1; then
-    rustup update
-    if command -v cargo-install-update >/dev/null 2>&1; then
-        cargo install-update -a
+if run_user_shell "command -v rustup >/dev/null 2>&1"; then
+    run_user_shell "rustup update"
+    if run_user_shell "command -v cargo-install-update >/dev/null 2>&1"; then
+        run_user_shell "cargo install-update -a"
     else
         printf "\033[90m  Tip: Run 'cargo install cargo-update' to enable auto-updating cargo packages.\033[0m\n"
     fi
