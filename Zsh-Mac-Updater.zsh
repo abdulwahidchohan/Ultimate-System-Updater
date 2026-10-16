@@ -1,8 +1,12 @@
 #!/bin/zsh
 
-# Ultimate Mac Updater (Zsh)
-# Made by Abdul Wahid Chohan
-# Primary Use Case: Modern interactive use, high customization
+# ============================================================
+#  Ultimate Mac Updater (Zsh) v2.0
+#  Made by Abdul Wahid Chohan
+#  Covers: macOS softwareupdate, Homebrew (formulae + casks),
+#           Mac App Store (mas), npm/pnpm/yarn, pip/pipx/conda,
+#           Ruby Gems, Rust/Cargo, Go Toolchain
+# ============================================================
 
 NON_INTERACTIVE=0
 for arg in "$@"; do
@@ -15,157 +19,184 @@ if [ ! -t 0 ] || [ ! -t 1 ]; then
     NON_INTERACTIVE=1
 fi
 
-CONNECTIVITY_CHECK_URL="https://github.com"
-ORIGINAL_USER="${SUDO_USER:-}"
-
-run_user_shell() {
-    local cmd="$1"
-    if [ -n "$ORIGINAL_USER" ] && [ "$ORIGINAL_USER" != "root" ]; then
-        sudo -H -u "$ORIGINAL_USER" zsh -lc "$cmd"
+# ── Detect if pip needs --break-system-packages (PEP 668 on macOS 14+) ──────
+pip_install_pkg() {
+    local pip_cmd="$1"
+    shift
+    if "$pip_cmd" install "$@" 2>&1 | grep -q "externally-managed-environment"; then
+        "$pip_cmd" install --break-system-packages "$@"
     else
-        zsh -lc "$cmd"
+        "$pip_cmd" install "$@"
     fi
 }
 
-check_internet_connectivity() {
-    if command -v curl >/dev/null 2>&1; then
-        if curl --head --silent --fail --max-time 10 "${CONNECTIVITY_CHECK_URL}" >/dev/null 2>&1; then
-            return 0
-        fi
-        return 1
-    elif command -v wget >/dev/null 2>&1; then
-        if wget --spider --quiet --timeout=10 "${CONNECTIVITY_CHECK_URL}" >/dev/null 2>&1; then
-            return 0
-        fi
-        return 1
-    fi
-
-    return 2
-}
-
-# --- AUTOMATIC ADMINISTRATOR CHECK ---
+# ── Administrator check ──────────────────────────────────────────────────────
 CURRENT_EUID="${EUID:-$(id -u)}"
 if [ "$CURRENT_EUID" -ne 0 ]; then
     if ! command -v sudo >/dev/null 2>&1; then
-        printf "\033[31m[!] sudo not found and root privileges are required. Exiting.\033[0m\n"
+        printf "\033[31m[!] sudo not found and root is required. Exiting.\033[0m\n"
         exit 1
     fi
-    printf "\033[33m[!] Administrator privileges required. Requesting sudo access...\033[0m\n"
+    printf "\033[33m[!] Administrator privileges required. Requesting sudo...\033[0m\n"
     exec sudo -E zsh "$0" "$@" || {
-        printf "\033[31m[!] Elevation failed or was denied. Exiting.\033[0m\n"
+        printf "\033[31m[!] Elevation failed. Exiting.\033[0m\n"
         exit 1
     }
 fi
 
 printf "\033[36m=============================================\033[0m\n"
 printf "\033[36m      STARTING FULL SYSTEM UPDATE PROCESS    \033[0m\n"
-printf "\033[36m       Made by Abdul Wahid Chohan            \033[0m\n"
+printf "\033[36m       Made by Abdul Wahid Chohan v2.0       \033[0m\n"
 printf "\033[36m=============================================\033[0m\n"
 echo ""
 
-check_internet_connectivity
-internet_check_status=$?
-if [ "$internet_check_status" -ne 0 ]; then
-    if [ "$internet_check_status" -eq 2 ]; then
-        printf "\033[31m[!] curl or wget is not installed, so internet connectivity cannot be verified. Install curl or wget and re-run this script.\033[0m\n"
-    else
-        printf "\033[31m[!] Internet connectivity check failed. Connect to the internet and re-run this script.\033[0m\n"
-    fi
-    exit 1
-fi
-
-# ============================================
-# STEP 1: macOS System Updates
-# ============================================
-printf "\033[33m[1/7] Checking for macOS System Updates...\033[0m\n"
-printf "\033[33m  [!] macOS may request or force a restart during some system updates.\033[0m\n"
-softwareupdate -i -a
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 1/8 — macOS System Updates
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[1/8] Checking for macOS System Updates...\033[0m\n"
+printf "\033[33m  [!] macOS may request or force a restart during some updates.\033[0m\n"
+softwareupdate --all --install --agree-to-license 2>/dev/null || softwareupdate -i -a
 echo ""
 
-# ============================================
-# STEP 2: Homebrew Package Manager
-# ============================================
-printf "\033[33m[2/7] Updating Homebrew Packages...\033[0m\n"
-if run_user_shell "command -v brew >/dev/null 2>&1"; then
-    printf "\033[90m  [*] Running brew update & upgrade...\033[0m\n"
-    run_user_shell "brew update && brew upgrade && brew cleanup"
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 2/8 — Homebrew (Formulae + Casks + Cleanup)
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[2/8] Updating Homebrew Packages...\033[0m\n"
+
+if command -v brew >/dev/null 2>&1; then
+    printf "\033[90m  [*] Updating Homebrew itself...\033[0m\n"
+    brew update
+
+    printf "\033[90m  [*] Upgrading formulae...\033[0m\n"
+    brew upgrade
+
+    printf "\033[90m  [*] Upgrading casks...\033[0m\n"
+    brew upgrade --cask --greedy 2>/dev/null || brew upgrade --cask
+
+    printf "\033[90m  [*] Running brew cleanup...\033[0m\n"
+    brew cleanup -s
+
+    printf "\033[90m  [*] Running brew doctor (warnings only)...\033[0m\n"
+    brew doctor 2>&1 | grep -E "^Warning:|^Error:" || true
+
+    printf "\033[32m  Homebrew update complete.\033[0m\n"
 else
     printf "\033[90m  Homebrew not found. Install from https://brew.sh\033[0m\n"
 fi
 echo ""
 
-# ============================================
-# STEP 3: Mac App Store Apps (via mas-cli)
-# ============================================
-printf "\033[33m[3/7] Updating Mac App Store Apps...\033[0m\n"
-if run_user_shell "command -v mas >/dev/null 2>&1"; then
-    if run_user_shell "mas account >/dev/null 2>&1"; then
-        run_user_shell "mas upgrade"
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 3/8 — Mac App Store (via mas-cli)
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[3/8] Updating Mac App Store Apps...\033[0m\n"
+
+if command -v mas >/dev/null 2>&1; then
+    if mas account >/dev/null 2>&1; then
+        mas upgrade
+        printf "\033[32m  App Store apps updated.\033[0m\n"
     else
-        printf "\033[90m  mas installed but not signed in. Skipping.\033[0m\n"
+        printf "\033[90m  mas is installed but not signed in to Apple ID. Skipping.\033[0m\n"
     fi
 else
     printf "\033[90m  mas not found. Install via Homebrew: brew install mas\033[0m\n"
 fi
 echo ""
 
-# ============================================
-# STEP 4: Node.js & Global NPM Packages
-# ============================================
-printf "\033[33m[4/7] Updating Global NPM Packages...\033[0m\n"
-if run_user_shell "command -v npm >/dev/null 2>&1"; then
-    run_user_shell "npm update -g"
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 4/8 — Node.js & Global npm / pnpm / yarn
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[4/8] Updating Global Node.js Package Managers...\033[0m\n"
+
+if command -v npm >/dev/null 2>&1; then
+    printf "\033[90m  [*] Updating npm itself...\033[0m\n"
+    npm install -g npm@latest
+    printf "\033[90m  [*] Updating all global npm packages...\033[0m\n"
+    npm update -g
 else
     printf "\033[90m  npm not found. Skipping.\033[0m\n"
 fi
+
+if command -v pnpm >/dev/null 2>&1; then
+    printf "\033[90m  [*] Updating pnpm global packages...\033[0m\n"
+    pnpm update -g
+fi
+
+if command -v yarn >/dev/null 2>&1; then
+    printf "\033[90m  [*] Updating yarn global packages...\033[0m\n"
+    yarn global upgrade
+fi
 echo ""
 
-# ============================================
-# STEP 5: Python (PIP) Packages
-# ============================================
-printf "\033[33m[5/7] Updating Global Python (PIP) Packages...\033[0m\n"
-printf "\033[33m  [!] Aggressive mode enabled: updating all global Python packages.\033[0m\n"
-if run_user_shell "command -v pip3 >/dev/null 2>&1"; then
-    run_user_shell "pip3 install pip-review --upgrade"
-    if run_user_shell "command -v pip-review >/dev/null 2>&1"; then
-        run_user_shell "pip-review --local --auto"
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 5/8 — Python (pip) + pipx + conda/mamba
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[5/8] Updating Global Python Packages...\033[0m\n"
+printf "\033[33m  [!] Aggressive mode: upgrading all global Python packages.\033[0m\n"
+
+PIP_CMD=""
+if command -v pip3 >/dev/null 2>&1; then
+    PIP_CMD="pip3"
+elif command -v pip >/dev/null 2>&1; then
+    PIP_CMD="pip"
+fi
+
+if [ -n "$PIP_CMD" ]; then
+    printf "\033[90m  [*] Upgrading pip, setuptools & wheel...\033[0m\n"
+    pip_install_pkg "$PIP_CMD" --upgrade pip setuptools wheel
+
+    printf "\033[90m  [*] Installing/upgrading pip-review...\033[0m\n"
+    pip_install_pkg "$PIP_CMD" pip-review --upgrade
+
+    if command -v pip-review >/dev/null 2>&1; then
+        printf "\033[90m  [*] Upgrading all outdated packages...\033[0m\n"
+        pip-review --local --auto
+        printf "\033[32m  Python packages updated.\033[0m\n"
     else
-        printf "\033[90m  pip-review not found after install attempt. Skipping auto-review.\033[0m\n"
-    fi
-elif run_user_shell "command -v pip >/dev/null 2>&1"; then
-    run_user_shell "pip install pip-review --upgrade"
-    if run_user_shell "command -v pip-review >/dev/null 2>&1"; then
-        run_user_shell "pip-review --local --auto"
-    else
-        printf "\033[90m  pip-review not found after install attempt. Skipping auto-review.\033[0m\n"
+        printf "\033[90m  pip-review not found after install. Skipping auto-review.\033[0m\n"
     fi
 else
     printf "\033[90m  pip not found. Skipping.\033[0m\n"
 fi
+
+if command -v pipx >/dev/null 2>&1; then
+    printf "\033[90m  [*] Upgrading pipx global tools...\033[0m\n"
+    pipx upgrade-all
+fi
+
+if command -v conda >/dev/null 2>&1; then
+    printf "\033[90m  [*] Updating conda base environment...\033[0m\n"
+    conda update -n base -c defaults conda -y
+    conda update --all -y
+elif command -v mamba >/dev/null 2>&1; then
+    printf "\033[90m  [*] Updating mamba environment...\033[0m\n"
+    mamba update --all -y
+fi
 echo ""
 
-# ============================================
-# STEP 6: Ruby Gems
-# ============================================
-printf "\033[33m[6/7] Updating Ruby Gems...\033[0m\n"
-printf "\033[33m  [!] Aggressive mode enabled: updating system RubyGems and all global gems.\033[0m\n"
-if run_user_shell "command -v gem >/dev/null 2>&1"; then
-    run_user_shell "gem update --system"
-    run_user_shell "gem update"
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 6/8 — Ruby Gems
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[6/8] Updating Ruby Gems...\033[0m\n"
+
+if command -v gem >/dev/null 2>&1; then
+    gem update --system
+    gem update
+    gem cleanup
+    printf "\033[32m  Ruby gems updated and cleaned up.\033[0m\n"
 else
     printf "\033[90m  gem not found. Skipping.\033[0m\n"
 fi
 echo ""
 
-# ============================================
-# STEP 7: Rust / Cargo Packages
-# ============================================
-printf "\033[33m[7/7] Updating Rust & Global Cargo Packages...\033[0m\n"
-printf "\033[33m  [!] Aggressive mode enabled: updating all globally installed cargo crates.\033[0m\n"
-if run_user_shell "command -v rustup >/dev/null 2>&1"; then
-    run_user_shell "rustup update"
-    if run_user_shell "command -v cargo-install-update >/dev/null 2>&1"; then
-        run_user_shell "cargo install-update -a"
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 7/8 — Rust / Cargo
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[7/8] Updating Rust & Global Cargo Packages...\033[0m\n"
+
+if command -v rustup >/dev/null 2>&1; then
+    rustup update
+    if command -v cargo-install-update >/dev/null 2>&1; then
+        cargo install-update -a
     else
         printf "\033[90m  Tip: Run 'cargo install cargo-update' to enable auto-updating cargo packages.\033[0m\n"
     fi
@@ -174,12 +205,30 @@ else
 fi
 echo ""
 
+# ════════════════════════════════════════════════════════════════════════════
+# STEP 8/8 — Go Toolchain
+# ════════════════════════════════════════════════════════════════════════════
+printf "\033[33m[8/8] Updating Go Toolchain...\033[0m\n"
+
+if command -v go >/dev/null 2>&1; then
+    printf "\033[90m  Current: $(go version)\033[0m\n"
+    if command -v brew >/dev/null 2>&1; then
+        brew upgrade go 2>/dev/null || true
+        printf "\033[32m  Go toolchain updated via Homebrew.\033[0m\n"
+    else
+        printf "\033[90m  Visit https://go.dev/dl/ to update Go manually.\033[0m\n"
+    fi
+else
+    printf "\033[90m  Go not found. Skipping.\033[0m\n"
+fi
+echo ""
+
 printf "\033[32m=============================================\033[0m\n"
 printf "\033[32m        ALL SYSTEM UPDATES COMPLETED!        \033[0m\n"
 printf "\033[32m=============================================\033[0m\n"
 echo ""
 
-# --- REBOOT CHECK ---
+# ── Reboot check ─────────────────────────────────────────────────────────────
 printf "\033[90m[*] Checking if a system reboot is required...\033[0m\n"
 if softwareupdate -l 2>/dev/null | grep -Ei 'restart|recommended' >/dev/null; then
     printf "\033[33m[!] WARNING: A system reboot may be required to finish installing updates.\033[0m\n"

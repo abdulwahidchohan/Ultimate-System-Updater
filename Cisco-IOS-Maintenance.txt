@@ -1,60 +1,150 @@
-! Cisco IOS Maintenance & Update Checklist Template
+! ============================================================
+! Cisco IOS Maintenance & Upgrade Checklist v2.0
 ! Made by Abdul Wahid Chohan
-! Primary Case: Firmware updates and configuration backup for routers/switches
+! Use Case: Firmware upgrades, config backup, and
+!           pre/post-change verification for routers & switches
+!
+! CAUTION: A reload will interrupt ALL traffic through this device.
+!          Always schedule a maintenance window before proceeding.
+! ============================================================
 
 ! ----------------------------------------------------
-! 1. Enter Privileged EXEC mode
+! PHASE 1 — PRE-UPGRADE CHECKS & BACKUP
 ! ----------------------------------------------------
+
+! 1. Enter Privileged EXEC mode
 enable
 
-! ----------------------------------------------------
-! 2. Show system version and uptime
-! Verify current IOS version before any upgrades
-! ----------------------------------------------------
+! 2. Verify current IOS version and platform
 show version
 
-! ----------------------------------------------------
-! 3. Show current running configuration & Interface status
-! ----------------------------------------------------
-show running-config
-show ip interface brief
+! 3. Check system uptime and processes (verify stable state)
+show processes cpu history
 
-! ----------------------------------------------------
-! 4. Save the running configuration to NVRAM 
-! (crucial before making changes or reloading)
-! ----------------------------------------------------
+! 4. Review system logs for any recent errors before upgrade
+show logging | include %ERR|%FAIL|%DOWN|%CRASH
+
+! 5. Verify current routing table and interface states
+show ip interface brief
+show ip route summary
+
+! 6. Check CDP/LLDP neighbors (document topology)
+show cdp neighbors detail
+
+! 7. Verify spanning-tree state (confirm no TCN loops)
+show spanning-tree summary
+
+! 8. Check flash memory for available space
+show flash:
+show file information flash:
+
+! 9. Save running config to NVRAM FIRST
 copy running-config startup-config
 
-! ----------------------------------------------------
-! 5. Check flash memory for available space
-! (Determine if you can fit a new .bin file)
-! ----------------------------------------------------
-show flash:
+! 10. Backup running config to TFTP server (replace with your TFTP IP)
+! copy running-config tftp:
+! Address or name of remote host []? 192.168.1.10
+! Destination filename []? router-backup-<hostname>-<date>.cfg
 
-! ----------------------------------------------------
-! 6. Ping a test destination to verify internet connectivity
-! ----------------------------------------------------
+! 11. Backup using IOS archive method (preferred — stores locally)
+! configure terminal
+!  archive
+!   path flash:archive-config
+!   write-memory
+!  exit
+! exit
+! archive config  (run this to save immediately)
+
+! 12. Ping TFTP/gateway to verify connectivity before download
 ping 8.8.8.8
+ping 192.168.1.10
 
 ! ----------------------------------------------------
-! 7. Download new IOS image via TFTP (Example)
+! PHASE 2 — IOS IMAGE DOWNLOAD & VERIFICATION
 ! ----------------------------------------------------
+
+! 13. Download new IOS image via TFTP
+!     (Replace IPs and filename with your actual values)
 ! copy tftp: flash:
 ! Address or name of remote host []? 192.168.1.10
-! Source filename []? c1900-universalk9-mz.SPA.154-3.M2.bin
-! Destination filename []? c1900-universalk9-mz.SPA.154-3.M2.bin
-! Verify the file in flash after transfer and confirm file size/hash if available
+! Source filename []? c1900-universalk9-mz.SPA.157-3.M9.bin
+! Destination filename []? c1900-universalk9-mz.SPA.157-3.M9.bin
+
+! 14. CRITICAL: Verify file integrity after transfer (MD5 hash)
+!     Compare the output hash with Cisco's published MD5 for this image.
+! verify /md5 flash:c1900-universalk9-mz.SPA.157-3.M9.bin
+!   (Optional: SHA-512 verification for higher assurance)
+! verify /sha512 flash:c1900-universalk9-mz.SPA.157-3.M9.bin
+
+! 15. Confirm the file exists and check its size
+! dir flash: | include .bin
 
 ! ----------------------------------------------------
-! 8. Set the boot path to the new image
+! PHASE 3 — BOOT CONFIGURATION
 ! ----------------------------------------------------
+
+! 16. Set the new image as the boot file
 ! configure terminal
-! boot system flash c1900-universalk9-mz.SPA.154-3.M2.bin
+!  no boot system
+!  boot system flash:c1900-universalk9-mz.SPA.157-3.M9.bin
+!  config-register 0x2102
 ! exit
+
+! 17. Save the updated boot config
 ! copy running-config startup-config
 
+! 18. Verify boot system will use the new image on next reload
+! show boot
+
 ! ----------------------------------------------------
-! 9. Reload router to apply changes
-! WARNING: Reload will interrupt all traffic through this device
+! PHASE 4 — RELOAD & POST-UPGRADE VERIFICATION
 ! ----------------------------------------------------
+
+! 19. Schedule reload (optional — gives window to cancel with 'reload cancel')
+! reload in 30    (schedule for 30 minutes from now)
+
+! 20. OR reload immediately (WARNING: interrupts all traffic NOW)
 ! reload
+
+! ---- After the device comes back online ----
+
+! 21. Confirm the new IOS version loaded correctly
+! show version
+
+! 22. Confirm all interfaces came back up
+! show ip interface brief
+
+! 23. Confirm routing table restored correctly
+! show ip route
+
+! 24. Re-check logs for any post-reload errors
+! show logging | include %ERR|%FAIL|%DOWN
+
+! 25. Confirm config matches pre-upgrade backup
+! show running-config
+
+! ----------------------------------------------------
+! PHASE 5 — ROLLBACK PROCEDURE (if upgrade fails)
+! ----------------------------------------------------
+
+! If the new image fails to boot or causes issues:
+
+! Option A — Reload with old image (boot from ROMMON if needed):
+! rommon 1> dir flash:
+! rommon 2> boot flash:c1900-universalk9-mz.SPA.154-3.M2.bin  (old image)
+
+! Option B — Change boot statement while still connected:
+! configure terminal
+!  no boot system flash:c1900-universalk9-mz.SPA.157-3.M9.bin
+!  boot system flash:c1900-universalk9-mz.SPA.154-3.M2.bin
+! exit
+! copy running-config startup-config
+! reload
+
+! Option C — Restore from archived config backup:
+! configure replace flash:archive-config-<timestamp> force
+
+! ----------------------------------------------------
+! END OF CHECKLIST
+! Made by Abdul Wahid Chohan — Use during scheduled maintenance windows only.
+! ----------------------------------------------------
