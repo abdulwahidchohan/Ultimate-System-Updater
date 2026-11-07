@@ -31,7 +31,7 @@ function Wait-ForPath {
     param([Parameter(Mandatory)][string]$Path, [int]$TimeoutSeconds = 90)
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {
-        if (Test-Path $Path) { return $true }
+        if (Test-Path -LiteralPath $Path) { return $true }
         Start-Sleep -Seconds 2
     }
     return $false
@@ -44,20 +44,22 @@ function Find-OemExe {
         [string]$NamePattern,
         [string]$ExeName
     )
-    foreach ($p in $KnownPaths) { if (Test-Path $p) { return $p } }
+    foreach ($p in $KnownPaths) {
+        if ($p -and (Test-Path -LiteralPath $p)) { return $p }
+    }
     $roots = @(
         'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*',
         'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*'
     )
     foreach ($root in $roots) {
-        Get-ItemProperty -Path $root -ErrorAction SilentlyContinue |
-            Where-Object { $_.DisplayName -like $NamePattern } |
-            ForEach-Object {
-                if ($_.InstallLocation) {
-                    $c = Join-Path $_.InstallLocation $ExeName
-                    if (Test-Path $c) { return $c }
-                }
+        $entries = Get-ItemProperty -Path $root -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -like $NamePattern }
+        foreach ($entry in $entries) {
+            if ($entry.InstallLocation) {
+                $candidate = Join-Path $entry.InstallLocation $ExeName
+                if (Test-Path -LiteralPath $candidate) { return $candidate }
             }
+        }
     }
     $cmd = Get-Command $ExeName -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
@@ -66,12 +68,54 @@ function Find-OemExe {
 
 # ── Helper: run an OEM updater process ───────────────────────────────────────
 function Invoke-OemUpdater {
-    param([string]$Path, [string]$Args, [string]$Label)
-    $proc = Start-Process -FilePath $Path -ArgumentList $Args -Wait -PassThru
-    if ($proc.ExitCode -eq 0) {
-        Write-Host "  $Label updates completed." -ForegroundColor Green
-    } else {
-        Write-Warning "[!] $Label updater exited with code $($proc.ExitCode)."
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [string]$Arguments,
+        [Parameter(Mandatory)][string]$Label
+    )
+    try {
+        if ([string]::IsNullOrWhiteSpace($Arguments)) {
+            $proc = Start-Process -FilePath $Path -Wait -PassThru -ErrorAction Stop
+        } else {
+            $proc = Start-Process -FilePath $Path -ArgumentList $Arguments -Wait -PassThru -ErrorAction Stop
+        }
+        if ($proc.ExitCode -eq 0) {
+            Write-Host "  $Label updates completed." -ForegroundColor Green
+        } else {
+            Write-Warning "[!] $Label updater exited with code $($proc.ExitCode)."
+        }
+    } catch {
+        Write-Warning "[!] Failed to launch $Label updater: $($_.Exception.Message)"
+    }
+}
+
+# ── Helper: repair WinGet Fast Cache (0x80071130) if corrupted ───────────────
+function Repair-WingetCacheIfNeeded {
+    param([int]$ExitCode)
+    # 0x80071130 (-2147020496) = Fast Cache data not found
+    if ($ExitCode -eq -2147020496) {
+        Write-Host '  [*] WinGet cache error (0x80071130) detected. Resetting sources...' -ForegroundColor Yellow
+        winget source reset --force 2>$null | Out-Null
+        winget source update 2>$null | Out-Null
+        return $true
+    }
+    return $false
+}
+
+# ── Helper: upgrade a specific WinGet package only if installed ──────────────
+function Update-WingetPackageIfInstalled {
+    param([Parameter(Mandatory)][string]$Id)
+    $listOut = winget list --id $Id -e --accept-source-agreements 2>$null
+    if ($LASTEXITCODE -eq -2147020496) {
+        Repair-WingetCacheIfNeeded -ExitCode $LASTEXITCODE | Out-Null
+        $listOut = winget list --id $Id -e --accept-source-agreements 2>$null
+    }
+    if ($LASTEXITCODE -eq 0 -and ($listOut -match [regex]::Escape($Id))) {
+        winget upgrade --id $Id -e --silent --accept-package-agreements --accept-source-agreements 2>$null
+        if (Repair-WingetCacheIfNeeded -ExitCode $LASTEXITCODE) {
+            winget upgrade --id $Id -e --silent --accept-package-agreements --accept-source-agreements 2>$null
+        }
     }
 }
 
@@ -187,8 +231,8 @@ if ($vendor -match 'Dell') {
             if (-not $dcu) { Wait-ForPath "$env:ProgramFiles\Dell\CommandUpdate\dcu-cli.exe" | Out-Null }
         } else { Write-Warning '[!] winget not found. Cannot auto-install Dell Command Update.' }
     }
-    if ($dcu -and (Test-Path $dcu)) {
-        Invoke-OemUpdater -Path $dcu -Args '/applyUpdates -silent -reboot=disable' -Label 'Dell OEM'
+    if ($dcu -and (Test-Path -LiteralPath $dcu)) {
+        Invoke-OemUpdater -Path $dcu -Arguments '/applyUpdates -silent -reboot=disable' -Label 'Dell OEM'
     } else { Write-Warning '[!] Dell Command Update not found after install attempt.' }
 
 } elseif ($vendor -match 'Lenovo') {
@@ -209,8 +253,13 @@ if ($vendor -match 'Dell') {
             ) -NamePattern '*Lenovo*System*Update*' -ExeName 'tvsu.exe'
         } else { Write-Warning '[!] winget not found. Cannot auto-install Lenovo System Update.' }
     }
-    if ($su -and (Test-Path $su)) {
-        Invoke-OemUpdater -Path $su -Args '/CM -search A -action INSTALL -includerebootpackages 1,3,4,5 -noreboot' -Label 'Lenovo OEM'
+    if ($su -and (Test-Path -LiteralPath $su)) {
+        # Ensure Lenovo System Update allows command-line /CM execution
+        $tvsuReg = 'HKLM:\SOFTWARE\WOW6432Node\Lenovo\System Update\Preferences\UserPreference'
+        if (Test-Path $tvsuReg) {
+            Set-ItemProperty -Path $tvsuReg -Name 'SchedulerAbility' -Value 'YES' -ErrorAction SilentlyContinue
+        }
+        Invoke-OemUpdater -Path $su -Arguments '/CM -search A -action INSTALL -includerebootpackages 1,3,4,5 -noreboot' -Label 'Lenovo OEM'
     } else { Write-Warning '[!] Lenovo System Update not found after install attempt.' }
 
 } elseif ($vendor -match 'HP|Hewlett') {
@@ -221,10 +270,9 @@ if ($vendor -match 'Dell') {
         "$env:ProgramFiles\HP\HP Support Assistant\HPSA_Service.exe"
     ) -NamePattern '*HP*Support*' -ExeName 'HPSF.exe'
 
-    if ($hpsa -and (Test-Path $hpsa)) {
+    if ($hpsa -and (Test-Path -LiteralPath $hpsa)) {
         Write-Host '  Launching HP Support Assistant update scan...' -ForegroundColor Gray
-        Start-Process -FilePath $hpsa -ArgumentList '-action StartSOLM' -Wait
-        Write-Host '  HP Support Assistant launched.' -ForegroundColor Green
+        Invoke-OemUpdater -Path $hpsa -Arguments '-action StartSOLM' -Label 'HP Support Assistant'
     } else {
         Write-Host '  HP Support Assistant not found. Installing via winget...' -ForegroundColor Yellow
         if (Test-Tool winget) {
@@ -264,10 +312,13 @@ Write-Step '[3/9] Updating Apps via Winget, Chocolatey & Scoop...'
 
 if (Test-Tool winget) {
     Write-Host '  [*] Updating winget itself (Microsoft.AppInstaller)...' -ForegroundColor Gray
-    winget upgrade --id Microsoft.AppInstaller -e --silent --accept-package-agreements --accept-source-agreements 2>$null
+    Update-WingetPackageIfInstalled -Id 'Microsoft.AppInstaller'
 
     Write-Host '  [*] Running full Winget upgrade...' -ForegroundColor Gray
     winget upgrade --all --include-unknown --accept-package-agreements --accept-source-agreements
+    if (Repair-WingetCacheIfNeeded -ExitCode $LASTEXITCODE) {
+        winget upgrade --all --include-unknown --accept-package-agreements --accept-source-agreements
+    }
 } else {
     Write-Host '  winget not found. Skipping.' -ForegroundColor DarkGray
 }
@@ -293,13 +344,23 @@ Write-Host ''
 Write-Step '[4/9] Updating Node.js & Global Node Package Managers...'
 
 if (Test-Tool winget) {
-    winget upgrade --id OpenJS.NodeJS.LTS -e --silent --accept-package-agreements --accept-source-agreements 2>$null
-    winget upgrade --id OpenJS.NodeJS     -e --silent --accept-package-agreements --accept-source-agreements 2>$null
+    Update-WingetPackageIfInstalled -Id 'OpenJS.NodeJS.LTS'
+    Update-WingetPackageIfInstalled -Id 'OpenJS.NodeJS'
 } else {
     Write-Host '  winget not found. Skipping Node.js binary upgrade.' -ForegroundColor DarkGray
 }
 
 if (Test-Tool npm) {
+    # Self-heal corrupted roaming npm installation (e.g., missing graceful-fs)
+    $null = npm --version 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning '[!] Corrupted roaming npm detected. Removing broken override to restore built-in npm...'
+        $roamingNpm = Join-Path $env:APPDATA 'npm'
+        Remove-Item -LiteralPath (Join-Path $roamingNpm 'node_modules\npm') -Recurse -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $roamingNpm -Filter 'npm*' -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -Path $roamingNpm -Filter 'npx*' -File -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+    }
+
     Write-Host '  [*] Updating npm itself...' -ForegroundColor Gray
     npm install -g npm@latest
 
@@ -308,12 +369,17 @@ if (Test-Tool npm) {
 
     # Allow install scripts for known blocked packages
     $blockedPkgs = @('@anthropic-ai/claude-code', 'better-sqlite3')
-    $installedGlobals = npm ls -g --depth=0 --json 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
-    foreach ($pkg in $blockedPkgs) {
-        $pkgName = $pkg -replace '/.*',''
-        if ($installedGlobals.dependencies.PSObject.Properties.Name -contains ($pkg -replace '@.*','').TrimStart('@')) {
-            Write-Host "  [*] Re-installing $pkg with scripts allowed..." -ForegroundColor Gray
-            npm install -g "$pkg" --allow-scripts="$pkg"
+    $rawGlobals = npm ls -g --depth=0 --json 2>$null
+    if ($rawGlobals) {
+        $installedGlobals = $rawGlobals | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if ($installedGlobals -and $installedGlobals.dependencies) {
+            $installedNames = $installedGlobals.dependencies.PSObject.Properties.Name
+            foreach ($pkg in $blockedPkgs) {
+                if ($installedNames -contains $pkg) {
+                    Write-Host "  [*] Re-installing $pkg with scripts allowed..." -ForegroundColor Gray
+                    npm install -g "$pkg" --foreground-scripts
+                }
+            }
         }
     }
 } else {
@@ -412,8 +478,8 @@ if (Test-Tool go) {
     $goVer = (go version 2>$null)
     Write-Host "  Current: $goVer" -ForegroundColor Gray
     if (Test-Tool winget) {
-        winget upgrade --id GoLang.Go -e --silent --accept-package-agreements --accept-source-agreements 2>$null
-        Write-Host '  Go toolchain upgrade attempted.' -ForegroundColor Green
+        Update-WingetPackageIfInstalled -Id 'GoLang.Go'
+        Write-Host '  Go toolchain upgrade check complete.' -ForegroundColor Green
     } else {
         Write-Host '  Visit https://go.dev/dl/ to update Go manually.' -ForegroundColor Yellow
     }
@@ -452,7 +518,7 @@ if (Test-Tool wsl) {
 # PowerShell itself
 if (Test-Tool winget) {
     Write-Host '  [*] Checking for PowerShell updates...' -ForegroundColor Gray
-    winget upgrade --id Microsoft.PowerShell -e --silent --accept-package-agreements --accept-source-agreements 2>$null
+    Update-WingetPackageIfInstalled -Id 'Microsoft.PowerShell'
     Write-Host '  PowerShell upgrade check complete.' -ForegroundColor Green
 }
 Write-Host ''
@@ -484,7 +550,7 @@ if ($pfr) { $reboot = $true }
 if ($reboot) {
     Write-Host ''
     Write-Host '[!] WARNING: A system reboot is REQUIRED to finish installing updates.' -ForegroundColor Yellow
-    Write-Host '[!] Please save your work and restart your computer soon.'              -ForegroundColor Yellow
+    Write-Host '[!] Please save your work and restart your computer soon.'               -ForegroundColor Yellow
 } else {
     Write-Host '[+] No reboot required. You are good to go!' -ForegroundColor Green
 }
