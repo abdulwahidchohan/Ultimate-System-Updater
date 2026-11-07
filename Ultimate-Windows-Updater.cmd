@@ -15,10 +15,12 @@ title Ultimate System Updater v2.0 - Abdul Wahid Chohan
 
 set "ELEVATED_ATTEMPTED=0"
 set "NON_INTERACTIVE=0"
+set "FORCE_DOWNLOAD=0"
 
 for %%A in (%*) do (
     if /I "%%~A"=="--elevated"        set "ELEVATED_ATTEMPTED=1"
     if /I "%%~A"=="--non-interactive" set "NON_INTERACTIVE=1"
+    if /I "%%~A"=="--force-download"  set "FORCE_DOWNLOAD=1"
 )
 
 :: ── Detect non-interactive / piped session ───────────────────────────────────
@@ -35,7 +37,7 @@ if %errorlevel% neq 0 (
         exit /b 1
     )
     echo [!] Administrator privileges required. Requesting elevation...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd -ArgumentList '/c \"%~f0\" --elevated %*' -Verb RunAs"
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Start-Process cmd.exe -ArgumentList '/c \"\"%~f0\" --elevated %*\"' -Verb RunAs"
     exit /b
 )
 
@@ -45,18 +47,21 @@ set "TEMP_PS1=%TEMP%\PowerShell-Updater_%RANDOM%.ps1"
 set "USE_TEMP=0"
 set "PS1_PATH=%LOCAL_PS1%"
 
-if not exist "%LOCAL_PS1%" (
-    echo [*] PowerShell-Updater.ps1 not found locally. Downloading from GitHub...
+if "%FORCE_DOWNLOAD%"=="1" set "USE_TEMP=1"
+if /I "%~dp0"=="%SystemRoot%\System32\" set "USE_TEMP=1"
+if not exist "%LOCAL_PS1%" set "USE_TEMP=1"
+
+if "%USE_TEMP%"=="1" (
+    echo [*] Downloading latest PowerShell-Updater.ps1 from GitHub...
     curl -L -s --fail -o "%TEMP_PS1%" "https://raw.githubusercontent.com/abdulwahidchohan/Ultimate-System-Updater/main/PowerShell-Updater.ps1"
-    if %errorlevel% neq 0 (
+    if !errorlevel! neq 0 (
         echo [!] Download failed. Please check your internet connection.
         echo [!] Or place PowerShell-Updater.ps1 alongside this file and re-run.
-        pause
+        if "%NON_INTERACTIVE%"=="0" pause
         exit /b 1
     )
     echo [*] Download successful.
     set "PS1_PATH=%TEMP_PS1%"
-    set "USE_TEMP=1"
 )
 
 :: ── Build argument list for the PS1 ─────────────────────────────────────────
@@ -67,11 +72,11 @@ if "%NON_INTERACTIVE%"=="1" set "PS_ARGS=%PS_ARGS% -NonInteractive"
 echo [*] Launching PowerShell update engine...
 echo.
 powershell -NoProfile -ExecutionPolicy Bypass -File "%PS1_PATH%" %PS_ARGS%
+set "EXIT_CODE=%errorlevel%"
 
 :: ── Cleanup temp download ────────────────────────────────────────────────────
 if "%USE_TEMP%"=="1" (
-    del "%TEMP_PS1%" 2>nul
+    del /f /q "%TEMP_PS1%" 2>nul
 )
 
-endlocal
-exit /b
+endlocal & exit /b %EXIT_CODE%
